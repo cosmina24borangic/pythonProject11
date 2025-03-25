@@ -39,7 +39,7 @@ Ce face codul?
 Cum rulezi proiectul
 
 1. Navigheaza in PyCharm la fisierul:
-   .../pythonProject11/.venv/Lib/site-packages/pip/__main__.py
+   .../pythonProject11/pip/__main__.py
 
 2. Ruleaza fisierul __main__.py:
    - Click dreapta > Run '__main__'
