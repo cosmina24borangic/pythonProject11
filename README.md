@@ -20,19 +20,15 @@ Ce face codul?
    - Transforma continutul in format .csv
    - Salveaza fisierul .csv fara coloana de index
    - Afiseaza un mesaj de confirmare la final
-   - Returneaza DataFrame-ul rezultat pentru utilizare ulterioara (optional)
+   - Returneaza DataFrame-ul rezultat pentru utilizare ulterioara 
    - Codul este eficient deoarece foloseste biblioteca Pandas pentru a citi fisierul Parquet si a-l converti rapid in format CSV. Functia este simpla si reutilizabila, iar utilizarea modulului pyarrow asigura performanta buna la citire. Conversia elimina indexul, ceea ce face fisierul rezultat mai curat si pregatit pentru analiza sau procesare ulterioara
 
 2. download_logos.py
-   - Descarca logo-urile pentru o lista de domenii folosind serviciul logo.clearbit.com
-   - Verifica daca fisierul exista deja si evita descarcarea duplicata
-   - Salveaza fisierele descarcate in folderul logos/ cu extensia .png
-   - Ruleaza descarcarile in paralel folosind ThreadPoolExecutor pentru eficienta
-   - Afiseaza in consola ce logo-uri au fost descarcate cu succes
-   - Apeleaza functia group_logos_with_tracking pentru a grupa logo-urile vizual
-   - Salveaza rezultatul gruparii in fisierul logo_clusters.csv
-   - Afiseaza grupurile de logo-uri similare in consola
-   - Afiseaza logo-urile grupate si vizual cu show_clusters
+   - Primeste o lista de domenii web
+   - Descarca logo-urile in paralel folosind ThreadPoolExecutor
+   - Apeleaza o functie externa pentru a grupa logo-urile in functie de similaritate vizuala
+   - Salveaza rezultatele in fisierul logo_clusters.csv
+   - Afiseaza grupurile in consola si vizual pe ecran
    - Codul este eficient deoarece foloseste paralelizarea cu ThreadPoolExecutor, ceea ce permite descarcarea mai multor logo-uri in acelasi timp, reducand semnificativ timpul total de executie. Se evita descarcarile duplicate prin verificarea existentei fisierului inainte. In plus, sunt tratate erorile de retea pentru a preveni blocarea programului. Logo-urile sunt grupate si salvate intr-un fisier CSV pentru analiza ulterioara, iar rezultatele sunt afisate si vizual, ceea ce imbunatateste experienta utilizatorului
   
 3. compare_logos.py
