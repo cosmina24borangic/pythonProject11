@@ -1,8 +1,8 @@
 
 EXPLICATIE PROIECT – CONVERSIE SI GRUPARE LOGO-URI
 
-Structura folderului `pip`:
-pip/
+Structura folderului `src`:
+src/
 ├── __main__.py                # Fisierul principal care trebuie rulat
 ├── convert_parquet.py         # Conversie din Parquet in CSV
 ├── download_logos.py          # Descarca logo-uri pe baza domeniilor
@@ -32,16 +32,14 @@ Ce face codul?
    - Codul este eficient deoarece foloseste paralelizarea cu ThreadPoolExecutor, ceea ce permite descarcarea mai multor logo-uri in acelasi timp, reducand semnificativ timpul total de executie. Se evita descarcarile duplicate prin verificarea existentei fisierului inainte. In plus, sunt tratate erorile de retea pentru a preveni blocarea programului. Logo-urile sunt grupate si salvate intr-un fisier CSV pentru analiza ulterioara, iar rezultatele sunt afisate si vizual, ceea ce imbunatateste experienta utilizatorului
   
 3. compare_logos.py
-   - Primeste logo-urile si le compara vizual
-   - Extrage caracteristici vizuale cu CLIP si ResNet
-   - Calculeaza similaritatea cu cosine_similarity
-   - Normalizeaza vectorii cu StandardScaler
-   - Grupeaza pe baza similaritatii folosind un prag (fara ML antrenat)
-   - Salveaza clusterele in fisiere .pkl cu timestamp
-   - Compara clusterele vechi cu cele noi si afiseaza diferentele
-   - Afiseaza vizual logo-urile grupate pe ecran
-   - Functia group_logos_with_tracking grupeaza logo-urile pe baza similaritatii vizuale, fara sa foloseasca algoritmi de clustering din machine learning. Pentru fiecare imagine, extrage caracteristici combinand doua modele AI pre-antrenate: CLIP (pentru forma si semantica) si ResNet50 (pentru detalii vizuale). Apoi, calculeaza similaritatea intre logo-uri si le grupeaza daca scorul depaseste un anumit prag. Salveaza rezultatele si compara cu rularile anterioare pentru a urmari evolutia grupurilor. Amceasta metoda respecta cerinta de a nu folosi ML clasic si ofera rezultate clare
-   - Metoda aleasa respecta cerinta de a nu folosi machine learning clasic si in acelasi timp ofera rezultate clare. Am evitat in mod intentionat procese complicate precum antrenarea de modele, alegerea arbitrara a numarului de clustere (cum se intampla in KMeans), ajustarea hiperparametrilor, folosirea unor algoritmi greu de interpretat precum DBSCAN sau agglomerative clustering, si crearea unor pipeline-uri complexe care ar fi mai greu de inteles si intretinut. In plus, prin combinarea a doua modele pre-antrenate in loc de unul singur, am evitat si dependenta de performanta unei singure arhitecturi
+   - Primeste logo-urile si le compară vizual, pe baza unor caracteristici extrase din imagini
+   - Extrage histograma de culoare HSV si descriitori ORB (feature points) pentru fiecare logo
+   - Compara logo-urile două cate doua folosind:corelatia intre histogramele de culoare si  similaritatea intre descriptorii ORB (folosind brute-force matcher)
+   - Grupează logo-urile care sunt suficient de similare vizual, pe baza unor praguri configurabile (hist_threshold, orb_threshold)
+   - Nu folosește nicio tehnica de machine learning clasic: nu se antreneaza modele, nu se setează numar de clustere, nu se aplica KMeans, DBSCAN etc
+   - Rezultatele sunt returnate sub forma de dictionar de clustere
+   - Afiseaza vizual grupurile de logo-uri in ferestre Matplotlib
+   - Metoda folosita pentru gruparea logo-urilor este mai eficienta decat tehnicile clasice de machine learning, deoarece evita complet complexitatea inutila. Nu este nevoie de antrenarea unor modele, nu trebuie stabilit dinainte un numar fix de clustere si nu sunt implicati hiperparametri dificil de ajustat. In locul unor algoritmi precum KMeans sau DBSCAN, care pot produce rezultate greu de interpretat, a fost aleasa o solutie mai simpla si mai usor de controlat: compararea directa a imaginilor folosind histograma de culoare si descriitori ORB
 
 4. __main__.py
    - ESTE FISIERUL CARE TREBUIE RULAT
@@ -55,20 +53,20 @@ Ce face codul?
 Cum rulezi proiectul
 
 1. Navigheaza in PyCharm la fisierul:
-   .../pythonProject11/pip/__main__.py
+   .../pythonProject11/src/__main__.py
 
 2. Ruleaza fisierul __main__.py:
    - Click dreapta > Run '__main__'
    - Sau in terminal:
-     python -m pip.__main__
+     python -m src.__main__
 
 Ce fisiere sunt generate si unde?
 
 | Fisier               | Locatie       | Continut                                         |
 |----------------------|----------------|--------------------------------------------------|
-| logos2.csv           | pip/           | Domeniile convertite din `.parquet`             |
-| logos/               | pip/logos/     | Toate logo-urile salvate ca `.png`              |
-| logo_clusters.csv    | pip/           | Gruparile de logo-uri similare (AI-based)       |
+| logos2.csv           | src/           | Domeniile convertite din `.parquet`             |
+| logos/               | src/logos/     | Toate logo-urile salvate ca `.png`              |
+| logo_clusters.csv    | src/           | Gruparile de logo-uri similare (AI-based)       |
 
 De ce a fost organizat asa?
 
