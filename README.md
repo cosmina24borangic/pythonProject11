@@ -1,8 +1,8 @@
 
 EXPLICATIE PROIECT – CONVERSIE SI GRUPARE LOGO-URI
 
-Structura folderului `src`:
-src/
+Structura folderului `pip`:
+pip/
 ├── __main__.py                # Fisierul principal care trebuie rulat
 ├── convert_parquet.py         # Conversie din Parquet in CSV
 ├── download_logos.py          # Descarca logo-uri pe baza domeniilor
@@ -53,20 +53,20 @@ Ce face codul?
 Cum rulezi proiectul
 
 1. Navigheaza in PyCharm la fisierul:
-   .../pythonProject11/src/__main__.py
+   .../pythonProject11/pip/__main__.py
 
 2. Ruleaza fisierul __main__.py:
    - Click dreapta > Run '__main__'
    - Sau in terminal:
-     python -m src.__main__
+     python -m pip.__main__
 
 Ce fisiere sunt generate si unde?
 
 | Fisier               | Locatie       | Continut                                         |
 |----------------------|----------------|--------------------------------------------------|
-| logos2.csv           | src/           | Domeniile convertite din `.parquet`             |
-| logos/               | src/logos/     | Toate logo-urile salvate ca `.png`              |
-| logo_clusters.csv    | src/           | Gruparile de logo-uri similare (AI-based)       |
+| logos2.csv           | pip/           | Domeniile convertite din `.parquet`             |
+| logos/               | pip/logos/     | Toate logo-urile salvate ca `.png`              |
+| logo_clusters.csv    | pip/           | Gruparile de logo-uri similare (AI-based)       |
 
 De ce a fost organizat asa?
 
