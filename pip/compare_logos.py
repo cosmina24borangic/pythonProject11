@@ -1,157 +1,78 @@
+import cv2
 import os
 import numpy as np
-import cv2
-import torch
-import clip
 import matplotlib.pyplot as plt
-import pickle
-import warnings
-from PIL import Image
-from datetime import datetime
-import torchvision.transforms as transforms
-from torchvision.models import resnet50, ResNet50_Weights
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
 
-# Optional: ascundem warningurile
-warnings.filterwarnings("ignore")
-
-# Setare pentru numar maxim de thread-uri
-os.environ["LOKY_MAX_CPU_COUNT"] = "4"
-
-# Initializare modele
-device = "cuda" if torch.cuda.is_available() else "cpu"
-clip_model, preprocess = clip.load("ViT-B/32", device=device)
-
-resnet = resnet50(weights=ResNet50_Weights.DEFAULT).to(device)
-resnet.eval()
-resnet_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-])
-
-
-# Extrage caracteristici dintr-o imagine folosind CLIP si ResNet
-def extract_features(img_path):
-    if not os.path.exists(img_path):
-        print(f" Fisier inexistent: {img_path}")
+# Extrage histograma HSV
+def extract_color_histogram(image_path):
+    image = cv2.imread(image_path)
+    if image is None:
         return None
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hist = cv2.calcHist([hsv], [0, 1], None, [50, 60], [0, 180, 0, 256])
+    cv2.normalize(hist, hist)
+    return hist.flatten()
 
-    # Convertim imaginea inclusiv pentru RGBA (pt. warning transparență)
-    image = Image.open(img_path).convert("RGBA").convert("RGB")
+# Extrage descriptorii ORB
+def extract_orb_descriptors(image_path):
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        return None
+    orb = cv2.ORB_create()
+    keypoints, descriptors = orb.detectAndCompute(image, None)
+    return descriptors
 
-    # CLIP features
-    clip_img = preprocess(image).unsqueeze(0).to(device)
-    with torch.no_grad():
-        clip_features = clip_model.encode_image(clip_img).cpu().numpy().flatten()
+# Compara descriptorii ORB folosind brute-force matcher
+def compare_orb(desc1, desc2):
+    if desc1 is None or desc2 is None:
+        return 0
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(desc1, desc2)
+    if not matches:
+        return 0
+    scores = [m.distance for m in matches]
+    return 1 - (sum(scores) / (len(scores) * 256))  # normalize between 0 and 1
 
-    # ResNet features
-    resnet_img = resnet_transform(image).unsqueeze(0).to(device)
-    with torch.no_grad():
-        resnet_features = resnet(resnet_img).cpu().numpy().flatten()
+# Compara histogramele
+def compare_histograms(hist1, hist2):
+    return cv2.compareHist(hist1.astype("float32"), hist2.astype("float32"), cv2.HISTCMP_CORREL)
 
-    return np.concatenate((clip_features, resnet_features))
-
-
-# Salvare caracteristici extrase
-def save_features(features, filename="features.pkl"):
-    with open(filename, "wb") as f:
-        pickle.dump(features, f)
-
-
-# Incarcare caracteristici existente
-def load_features(filename="features.pkl"):
-    if os.path.exists(filename):
-        with open(filename, "rb") as f:
-            return pickle.load(f)
-    return {}
-
-
-# Grupare pe baza similaritatii
-def group_by_similarity(features_dict, threshold=0.78):
-    logo_names = list(features_dict.keys())
-    feature_vectors = np.array([features_dict[name] for name in logo_names])
-
-    scaler = StandardScaler()
-    feature_vectors = scaler.fit_transform(feature_vectors)
-
-    sim_matrix = cosine_similarity(feature_vectors)
+# Grupeaza pe bază de histograma + ORB
+def group_logos_with_tracking(logo_paths, hist_threshold=0.8, orb_threshold=0.15):
+    features = {
+        path: {
+            "hist": extract_color_histogram(path),
+            "orb": extract_orb_descriptors(path)
+        } for path in logo_paths.values() if os.path.exists(path)
+    }
 
     clusters = []
     visited = set()
+    keys = list(features.keys())
 
-    for i in range(len(logo_names)):
-        if i in visited:
+    for i, key1 in enumerate(keys):
+        if key1 in visited:
             continue
-        group = [logo_names[i]]
-        visited.add(i)
-        for j in range(i + 1, len(logo_names)):
-            if j not in visited and sim_matrix[i][j] > threshold:
-                group.append(logo_names[j])
-                visited.add(j)
-        clusters.append(group)
+        cluster = [key1]
+        visited.add(key1)
+        for j in range(i + 1, len(keys)):
+            key2 = keys[j]
+            if key2 in visited:
+                continue
+
+            hist_sim = compare_histograms(features[key1]["hist"], features[key2]["hist"])
+            orb_sim = compare_orb(features[key1]["orb"], features[key2]["orb"])
+
+
+            if hist_sim > hist_threshold or orb_sim > orb_threshold:
+                cluster.append(key2)
+                visited.add(key2)
+
+        clusters.append(cluster)
 
     return {i: group for i, group in enumerate(clusters)}
 
-
-# Salvare clustere cu timestamp
-def save_clusters(clusters):
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"clusters_{timestamp}.pkl"
-    with open(filename, "wb") as f:
-        pickle.dump(clusters, f)
-    print(f" Clusterele au fost salvate in {filename}")
-    return filename
-
-
-# Compara clusterele vechi si noi
-def compare_clusters(old_clusters, new_clusters):
-    old_flat = {img: cid for cid, imgs in old_clusters.items() for img in imgs}
-    new_flat = {img: cid for cid, imgs in new_clusters.items() for img in imgs}
-
-    print("\n Comparare evolutie clustere:")
-    for img, new_cluster in new_flat.items():
-        old_cluster = old_flat.get(img)
-        if old_cluster is None:
-            print(f" {img} a fost adăugat in grupul {new_cluster}")
-        elif old_cluster != new_cluster:
-            print(f" {img} s-a mutat din grupul {old_cluster} in {new_cluster}")
-
-    removed = set(old_flat.keys()) - set(new_flat.keys())
-    for img in removed:
-        print(f" {img} a fost eliminat din clustere")
-
-
-# Obtine cel mai recent fisier de clustere
-def get_latest_cluster_file():
-    files = [f for f in os.listdir() if f.startswith("clusters_") and f.endswith(".pkl")]
-    if not files:
-        return None
-    return sorted(files)[-1]
-
-
-# Grupeaza logo-urile si urmareste modificarile
-def group_logos_with_tracking(logo_paths, similarity_threshold=0.78):
-    features_dict = {path: extract_features(path) for path in logo_paths.values() if os.path.exists(path)}
-    save_features(features_dict)
-
-    if not features_dict:
-        print("Niciun logo valid pentru comparare!")
-        return {}
-
-    new_clusters = group_by_similarity(features_dict, threshold=similarity_threshold)
-
-    previous_cluster_file = get_latest_cluster_file()
-    if previous_cluster_file:
-        with open(previous_cluster_file, "rb") as f:
-            old_clusters = pickle.load(f)
-        compare_clusters(old_clusters, new_clusters)
-
-    save_clusters(new_clusters)
-    return new_clusters
-
-
-# Afisare clustere
+# Vizualizare
 def show_clusters(clusters):
     for cluster_id, logos in clusters.items():
         num_logos = len(logos)
@@ -167,6 +88,3 @@ def show_clusters(clusters):
             ax.axis("off")
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show()
-
-
-
