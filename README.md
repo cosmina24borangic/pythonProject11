@@ -32,24 +32,29 @@ Ce face codul?
    - Codul este eficient deoarece foloseste paralelizarea cu ThreadPoolExecutor, ceea ce permite descarcarea mai multor logo-uri in acelasi timp, reducand semnificativ timpul total de executie. Se evita descarcarile duplicate prin verificarea existentei fisierului inainte. In plus, sunt tratate erorile de retea pentru a preveni blocarea programului. Logo-urile sunt grupate si salvate intr-un fisier CSV pentru analiza ulterioara, iar rezultatele sunt afisate si vizual, ceea ce imbunatateste experienta utilizatorului
   
 3. compare_logos.py
-   - Primeste logo-urile si le compară vizual, pe baza unor caracteristici extrase din imagini
-   - Extrage histograma de culoare HSV si descriitori ORB (feature points) pentru fiecare logo
-   - Compara logo-urile două cate doua folosind:corelatia intre histogramele de culoare si  similaritatea intre descriptorii ORB (folosind brute-force matcher)
-   - Grupează logo-urile care sunt suficient de similare vizual, pe baza unor praguri configurabile (hist_threshold, orb_threshold)
-   - Nu folosește nicio tehnica de machine learning clasic: nu se antreneaza modele, nu se setează numar de clustere, nu se aplica KMeans, DBSCAN etc
-   - Rezultatele sunt returnate sub forma de dictionar de clustere
-   - Afiseaza vizual grupurile de logo-uri in ferestre Matplotlib
-   - Metoda folosita pentru gruparea logo-urilor este mai eficienta decat tehnicile clasice de machine learning, deoarece evita complet complexitatea inutila. Nu este nevoie de antrenarea unor modele, nu trebuie stabilit dinainte un numar fix de clustere si nu sunt implicati hiperparametri dificil de ajustat. In locul unor algoritmi precum KMeans sau DBSCAN, care pot produce rezultate greu de interpretat, a fost aleasa o solutie mai simpla si mai usor de controlat: compararea directa a imaginilor folosind histograma de culoare si descriitori ORB
+   - Incarca modelele pre-antrenate CLIP si ResNet pentru extragerea caracteristicilor vizuale
+   - Deschide fiecare imagine si extrage vectori de caracteristici folosind ambele modele
+   - Comaseaza vectorii CLIP si ResNet intr-un singur vector unificat pentru fiecare imagine
+   - Calculeaza similaritatea cosinus intre toate perechile de imagini
+   - Grupeaza imaginile in functie de acest scor de similaritate, pe baza unui prag configurabil
+   - Aplica normalizare cu StandardScaler pentru alinierea distributiilor
+   - Salveaza grupurile rezultate intr-un fisier .pkl cu timestamp
+   - Daca exista un fisier anterior de clustere, compara evolutia intre vechi si nou: imagini mutate, adaugate sau eliminate
+   - Ofera o functie de afisare vizuala a grupurilor, unde fiecare cluster este prezentat cu imaginile sale alaturate
 
 4. __main__.py
    - ESTE FISIERUL CARE TREBUIE RULAT
    - Pasi:
      - Gestioneaza procesul complet de obtinere si analiza a logo-urilor pentru o lista de domenii
-     - Utilizeaza functia download_logo() pentru a descarca logo-urile dintr-un serviciu online
-     - Foloseste ThreadPoolExecutor in process_logos() pentru descarcare paralela
-     - Apeleaza group_logos_with_tracking() din modulul compare_logos pentru grupare vizuala
-     - Salveaza rezultatele gruparii intr-un fisier CSV folosind operatii standard de scriere in fisier
-     - Afiseaza grupurile obtinute in consola si vizual prin show_clusters() din compare_logos
+     - Converteste un fisier .parquet in .csv folosind Pandas (prin convert_parquet.convert_parquet_to_csv)
+     - Extrage coloana domain din fisierul CSV si o transforma intr-o lista
+     - Utilizeaza functia download_logo() din modulul download_logos pentru a descarca logo-urile dintr-un serviciu online (clearbit.com)
+     - Foloseste ThreadPoolExecutor pentru descarcarea paralela a logo-urilor
+     - Creeaza o mapare domain -> fisier_logo si elimina intrarile esuate
+     - Apeleaza group_logos_with_tracking() din modulul compare_logos pentru a grupa logo-urile pe baza similaritatii vizuale (CLIP + ResNet)
+     - Scrie rezultatele grupate intr-un fisier CSV (logo_clusters.csv) cu format: cluster, domenii, logo-uri
+     - Afiseaza grupurile in consola
+     - Apeleaza show_clusters() din compare_logos pentru a afisa fiecare grup de logo-uri vizual, folosind Matplotlib
 Cum rulezi proiectul
 
 1. Navigheaza in PyCharm la fisierul:
