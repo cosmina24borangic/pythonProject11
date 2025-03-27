@@ -11,26 +11,22 @@ if __name__ == "__main__":
     output_file = "logos2.csv"
     df = convert_parquet.convert_parquet_to_csv(input_file, output_file)
 
-    # Extragem domeniile
+    # Descarcam toate logo-urile
+    print("Incepem descarcarea logo-urilor...")
     domains = df["domain"].dropna().tolist()
 
-    print("Incepem descarcarea logo-urilor...")
-
-    # Descarcare paralela cu index
+    # Descarcare paralelizata
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = list(executor.map(lambda args: download_logos.download_logo(*args), enumerate(domains)))
-
-    # Filtram doar cele descarcate cu succes
-    logo_paths = {
-        domain: path for domain, path in results if path is not None
-    }
+        logo_paths = {
+            domain: path for domain, path in zip(domains, executor.map(download_logos.download_logo, domains))
+            if path is not None
+        }
 
     print(f"Am descarcat {len(logo_paths)} logo-uri. Incepem gruparea...")
 
-    # Grupam logo-urile
     clusters = compare_logos.group_logos_with_tracking(logo_paths)
 
-    # Salvam rezultatele in CSV
+    # Salvam gruparile intr-un fisier CSV
     with open("logo_clusters.csv", "w", encoding="utf-8") as f:
         f.write("Cluster,Domenii,Logo-uri\n")
         for cluster_id, logos in clusters.items():
@@ -39,7 +35,7 @@ if __name__ == "__main__":
 
     print("Grupurile de logo-uri au fost salvate in 'logo_clusters.csv'!")
 
-    # Afisam si vizual
+    # Afisam in consola si vizual
     if clusters:
         print("\nGrupuri de logo-uri similare:")
         for cluster_id, logos in clusters.items():
