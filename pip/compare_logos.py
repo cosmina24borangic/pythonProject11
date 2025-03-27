@@ -13,7 +13,7 @@ from torchvision.models import resnet50, ResNet50_Weights
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 
-# Optional: ascundem warningurile
+# Ascundem warningurile
 warnings.filterwarnings("ignore")
 
 # Setare pentru numar maxim de thread-uri
